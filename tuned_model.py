@@ -18,14 +18,14 @@ print("="*70)
 # - Duration: ~431 ms
 # - Peak acceleration: 792-845 °/s²
 
-# Extended time array for 500 ms simulation at 229.4 Hz sampling
+# Extended time array matching real data: 201 frames @ 229.4 Hz = ~0.876 seconds
 frame_rate = 229.4  # From real data
 dt = 1.0 / frame_rate  # 4.36 ms per frame
-duration = 0.5  # 500 ms to match real data
+duration = 201.0 / frame_rate  # Match the 201 frames of real data
 t = np.arange(0, duration, dt)
 
 print(f"\nSimulation parameters:")
-print(f"  Duration: {duration*1000:.0f} ms")
+print(f"  Duration: {duration*1000:.0f} ms ({len(t)} samples to match real data)")
 print(f"  Frame rate: {frame_rate:.1f} Hz")
 print(f"  Samples: {len(t)}")
 print(f"  dt: {dt*1000:.2f} ms")
@@ -129,6 +129,40 @@ print(f"  Peak position: {real_peak_position:.6f}°")
 print(f"\nScale factors (to match real data):")
 print(f"  Velocity scale: {velocity_scale:.6f}x")
 print(f"  Position scale: {position_scale:.6f}x")
+
+# ===== L2 ERROR CALCULATION =====
+# Align arrays to same length
+min_len = min(len(position), len(real_right_offset))
+model_pos_aligned = position[:min_len]
+real_pos_aligned = real_right_offset[:min_len]
+model_vel_aligned = velocity[:min_len]
+real_vel_aligned = real_right_vel[:min_len]
+model_acc_aligned = acceleration[:min_len]
+real_acc_aligned = real_right_acc[:min_len]
+
+# Calculate L2 errors
+l2_position = np.sqrt(np.mean((model_pos_aligned - real_pos_aligned) ** 2))
+l2_velocity = np.sqrt(np.mean((model_vel_aligned - real_vel_aligned) ** 2))
+l2_acceleration = np.sqrt(np.mean((model_acc_aligned - real_acc_aligned) ** 2))
+
+# Calculate normalized L2 errors (as percentage of real data range)
+pos_range = np.max(real_pos_aligned) - np.min(real_pos_aligned)
+vel_range = np.max(real_vel_aligned) - np.min(real_vel_aligned)
+acc_range = np.max(real_acc_aligned) - np.min(real_acc_aligned)
+
+norm_l2_pos = (l2_position / pos_range * 100) if pos_range > 0 else 0
+norm_l2_vel = (l2_velocity / vel_range * 100) if vel_range > 0 else 0
+norm_l2_acc = (l2_acceleration / acc_range * 100) if acc_range > 0 else 0
+
+print(f"\n--- L2 ERROR ANALYSIS (over {min_len} aligned samples) ---")
+print(f"Absolute L2 Errors:")
+print(f"  Position: {l2_position:.6f}° (RMS)")
+print(f"  Velocity: {l2_velocity:.6f}°/s (RMS)")
+print(f"  Acceleration: {l2_acceleration:.6f}°/s² (RMS)")
+print(f"\nNormalized L2 Errors (% of real data range):")
+print(f"  Position: {norm_l2_pos:.2f}%")
+print(f"  Velocity: {norm_l2_vel:.2f}%")
+print(f"  Acceleration: {norm_l2_acc:.2f}%")
 
 # (0, 0): Neural Input Commands
 axes[0, 0].plot(time*1000, E_ag, 'purple', linewidth=2.5, label='Agonist Command (E_ag)')
