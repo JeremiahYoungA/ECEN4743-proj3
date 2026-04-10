@@ -30,31 +30,27 @@ saccade_data = df.iloc[frame_start:frame_end].reset_index(drop=True)
 saccade_times = saccade_data['timestamp_ms'].values / 1000.0
 saccade_times = saccade_times - saccade_times[0]  # Start from 0
 
-# Get position data
-left_horiz = saccade_data['left_horizontal'].values
-right_horiz = saccade_data['right_horizontal'].values
+# Get position data (LEFT EYE ONLY)
+eye_horiz = saccade_data['left_horizontal'].values
 
 # Calculate velocities and accelerations
-left_vel = np.gradient(left_horiz, avg_dt)  # °/second
-right_vel = np.gradient(right_horiz, avg_dt)  # °/second
-
-left_acc = np.gradient(left_vel, avg_dt)  # °/s²
-right_acc = np.gradient(right_vel, avg_dt)  # °/s²
+eye_vel = np.gradient(eye_horiz, avg_dt)  # °/second
+eye_acc = np.gradient(eye_vel, avg_dt)  # °/s²
 
 print(f"\n--- REAL SACCADE (frames {frame_start}-{frame_end}) ---")
 print(f"Duration: {saccade_times[-1]*1000:.1f} ms")
 print(f"Samples: {len(saccade_data)}")
 
-print(f"\nLEFT EYE:")
+print(f"\nLEFT EYE (ANALYSIS):")
 print(f"  Position:")
-print(f"    Range: [{np.min(left_horiz):.4f}°, {np.max(left_horiz):.4f}°]")
-print(f"    Change: {np.max(left_horiz) - np.min(left_horiz):.4f}°")
+print(f"    Range: [{np.min(eye_horiz):.4f}°, {np.max(eye_horiz):.4f}°]")
+print(f"    Change: {np.max(eye_horiz) - np.min(eye_horiz):.4f}°")
 print(f"  Velocity:")
-print(f"    Range: [{np.min(left_vel):.2f}°/s, {np.max(left_vel):.2f}°/s]")
-print(f"    Peak: {np.max(np.abs(left_vel)):.2f}°/s")
-print(f"    Peak at time: {saccade_times[np.argmax(np.abs(left_vel))]*1000:.1f} ms")
+print(f"    Range: [{np.min(eye_vel):.2f}°/s, {np.max(eye_vel):.2f}°/s]")
+print(f"    Peak: {np.max(np.abs(eye_vel)):.2f}°/s")
+print(f"    Peak at time: {saccade_times[np.argmax(np.abs(eye_vel))]*1000:.1f} ms")
 print(f"  Acceleration:")
-print(f"    Range: [{np.min(left_acc):.1f}°/s², {np.max(left_acc):.1f}°/s²]")
+print(f"    Range: [{np.min(eye_acc):.1f}°/s², {np.max(eye_acc):.1f}°/s²]")
 
 print(f"\nRIGHT EYE:")
 print(f"  Position:")
@@ -71,22 +67,19 @@ print(f"\n" + "="*70)
 print("COMPARISON: REAL vs MODEL")
 print("="*70)
 
-print(f"""\nREAL DATA CHARACTERISTICS:
-  Peak velocity:        {np.max(np.abs(left_vel)):.1f}°/s (left) or {np.max(np.abs(right_vel)):.1f}°/s (right)
-  Saccade amplitude:    {np.max(left_horiz) - np.min(left_horiz):.3f}° (left) or {np.max(right_horiz) - np.min(right_horiz):.3f}° (right)
-  Saccade duration:     {saccade_times[-1]*1000:.0f} ms
-  Peak acceleration:    {np.max(np.abs(left_acc)):.0f}°/s² (left) or {np.max(np.abs(right_acc)):.0f}°/s² (right)
-
-CURRENT MODEL OUTPUT:
-  Peak velocity:        0.2°/s
-  Target amplitude:     15°
-  Saccade duration:     ~20 ms
-  Peak acceleration:    ~71°/s²
-
-SCALE FACTOR NEEDED:
-  Velocity scaling:     {(np.max(np.abs(left_vel)) / 0.2):.1f}x
-  Amplitude scaling:    {((np.max(left_horiz) - np.min(left_horiz)) / 15):.3f}x
-""")
+print(f"\nREAL DATA CHARACTERISTICS (LEFT EYE):")
+print(f"  Peak velocity:        {np.max(np.abs(eye_vel)):.1f}°/s")
+print(f"  Saccade amplitude:    {np.max(eye_horiz) - np.min(eye_horiz):.3f}°")
+print(f"  Saccade duration:     {saccade_times[-1]*1000:.0f} ms")
+print(f"  Peak acceleration:    {np.max(np.abs(eye_acc)):.0f}°/s²")
+print(f"\nCURRENT MODEL OUTPUT:")
+print(f"  Peak velocity:        0.2°/s")
+print(f"  Target amplitude:     15°")
+print(f"  Saccade duration:     ~20 ms")
+print(f"  Peak acceleration:    ~71°/s²")
+print(f"\nSCALE FACTOR NEEDED:")
+print(f"  Velocity scaling:     {(np.max(np.abs(eye_vel)) / 0.2):.1f}x")
+print(f"  Amplitude scaling:    {((np.max(eye_horiz) - np.min(eye_horiz)) / 15):.3f}x")
 
 print("KEY INSIGHT:")
 print("  - Real saccades are SLOW (5-10 °/s), not fast (500+ °/s in Robinson)")

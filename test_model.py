@@ -16,10 +16,10 @@ t = np.arange(0, 0.2, dt)
 print(f"\nSimulation: {len(t)} samples over {t[-1]} seconds at {1/dt} Hz")
 
 # Initialize model
-J = 2.3e-7
-B = 0.1
-K = 120
-K_se = 20
+J = 2.3e-7      # Moment of inertia [kg·m²]
+B = 0.1         # Viscous damping coefficient [N·s/rad]
+K = 120         # Elastic restoring coefficient [N/rad]
+K_se = 20       # Series elastic stiffness [N/rad]
 
 print(f"\nPhysical parameters:")
 print(f"  J = {J:.2e}, B = {B}, K = {K}, K_se = {K_se}")

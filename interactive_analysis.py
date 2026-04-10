@@ -102,8 +102,8 @@ def compute_fft(data):
     return frequencies[positive_idx], magnitude[positive_idx]
 
 
-def calculate_velocity(position_data):
-    """Calculate velocity from position data (degrees per frame)"""
+def calculate_velocity(position_data, frame_rate_hz=None):
+    """Calculate velocity from position data (degrees per second)"""
     if not position_data or len(position_data) < 2:
         return None
     
@@ -117,11 +117,15 @@ def calculate_velocity(position_data):
     # Pad first element to match length
     velocity = [0] + velocity
     
+    # Convert from degrees/frame to degrees/second if frame rate provided
+    if frame_rate_hz is not None:
+        velocity = [v * frame_rate_hz for v in velocity]
+    
     return velocity
 
 
-def calculate_acceleration(velocity_data):
-    """Calculate acceleration from velocity data (degrees per frame^2)"""
+def calculate_acceleration(velocity_data, frame_rate_hz=None):
+    """Calculate acceleration from velocity data (degrees per second²)"""
     if not velocity_data or len(velocity_data) < 2:
         return None
     
@@ -134,6 +138,10 @@ def calculate_acceleration(velocity_data):
     
     # Pad first element to match length
     acceleration = [0] + acceleration
+    
+    # Convert from degrees/frame² to degrees/second² if frame rate provided
+    if frame_rate_hz is not None:
+        acceleration = [a * (frame_rate_hz ** 2) for a in acceleration]
     
     return acceleration
 
@@ -154,6 +162,8 @@ if data and len(data) > 1:
     print(f"Nyquist frequency: {nyquist_freq:.2f} Hz")
     print(f"25 Hz cutoff in normalized frequency: {cutoff_normalized:.4f}")
 else:
+    fps = 229.4  # Default frame rate if data unavailable
+    nyquist_freq = fps / 2
     cutoff_normalized = 0.1
     print("Could not calculate sampling rate, using default cutoff of 0.1")
 
@@ -166,11 +176,11 @@ left_h_filtered = apply_lowpass_filter(left_h, cutoff_freq=cutoff_normalized)
 right_h_filtered = apply_lowpass_filter(right_h, cutoff_freq=cutoff_normalized)
 
 # Calculate velocity and acceleration from filtered position
-left_velocity = calculate_velocity(left_h_filtered)
-right_velocity = calculate_velocity(right_h_filtered)
+left_velocity = calculate_velocity(left_h_filtered, frame_rate_hz=fps)
+right_velocity = calculate_velocity(right_h_filtered, frame_rate_hz=fps)
 
-left_acceleration = calculate_acceleration(left_velocity)
-right_acceleration = calculate_acceleration(right_velocity)
+left_acceleration = calculate_acceleration(left_velocity, frame_rate_hz=fps)
+right_acceleration = calculate_acceleration(right_velocity, frame_rate_hz=fps)
 
 
 def create_main_plot(data_dict):
@@ -190,12 +200,12 @@ def create_main_plot(data_dict):
     )
     fig.add_trace(
         go.Scatter(x=data_dict['frames'], y=data_dict['left_velocity'], mode='lines', name='Left Velocity',
-                   line=dict(color='green', width=2), hovertemplate='Frame: %{x}<br>Velocity: %{y:.4f}°/frame'),
+                   line=dict(color='green', width=2), hovertemplate='Frame: %{x}<br>Velocity: %{y:.4f}°/s'),
         row=1, col=2
     )
     fig.add_trace(
         go.Scatter(x=data_dict['frames'], y=data_dict['left_acceleration'], mode='lines', name='Left Acceleration',
-                   line=dict(color='magenta', width=2), hovertemplate='Frame: %{x}<br>Accel: %{y:.4f}°/frame²'),
+                   line=dict(color='magenta', width=2), hovertemplate='Frame: %{x}<br>Accel: %{y:.4f}°/s²'),
         row=1, col=3
     )
     
@@ -207,12 +217,12 @@ def create_main_plot(data_dict):
     )
     fig.add_trace(
         go.Scatter(x=data_dict['frames'], y=data_dict['right_velocity'], mode='lines', name='Right Velocity',
-                   line=dict(color='orange', width=2), hovertemplate='Frame: %{x}<br>Velocity: %{y:.4f}°/frame'),
+                   line=dict(color='orange', width=2), hovertemplate='Frame: %{x}<br>Velocity: %{y:.4f}°/s'),
         row=2, col=2
     )
     fig.add_trace(
         go.Scatter(x=data_dict['frames'], y=data_dict['right_acceleration'], mode='lines', name='Right Acceleration',
-                   line=dict(color='purple', width=2), hovertemplate='Frame: %{x}<br>Accel: %{y:.4f}°/frame²'),
+                   line=dict(color='purple', width=2), hovertemplate='Frame: %{x}<br>Accel: %{y:.4f}°/s²'),
         row=2, col=3
     )
     
@@ -223,11 +233,11 @@ def create_main_plot(data_dict):
     
     # Update y-axes labels
     fig.update_yaxes(title_text="Angle (degrees)", row=1, col=1)
-    fig.update_yaxes(title_text="Velocity (°/frame)", row=1, col=2)
-    fig.update_yaxes(title_text="Acceleration (°/frame²)", row=1, col=3)
+    fig.update_yaxes(title_text="Velocity (°/s)", row=1, col=2)
+    fig.update_yaxes(title_text="Acceleration (°/s²)", row=1, col=3)
     fig.update_yaxes(title_text="Angle (degrees)", row=2, col=1)
-    fig.update_yaxes(title_text="Velocity (°/frame)", row=2, col=2)
-    fig.update_yaxes(title_text="Acceleration (°/frame²)", row=2, col=3)
+    fig.update_yaxes(title_text="Velocity (°/s)", row=2, col=2)
+    fig.update_yaxes(title_text="Acceleration (°/s²)", row=2, col=3)
     
     # Link all x-axes together with range slider on bottom-left
     fig.update_xaxes(title_text="Frame", row=1, col=1, matches='x')
@@ -398,10 +408,10 @@ def update_bandpass_filter(hpf_hz, lpf_hz, start_frame, end_frame):
         new_right_h_filtered = apply_lowpass_filter(right_h, cutoff_freq=lpf_normalized)
     
     # Recalculate velocity and acceleration
-    new_left_velocity = calculate_velocity(new_left_h_filtered)
-    new_right_velocity = calculate_velocity(new_right_h_filtered)
-    new_left_acceleration = calculate_acceleration(new_left_velocity)
-    new_right_acceleration = calculate_acceleration(new_right_velocity)
+    new_left_velocity = calculate_velocity(new_left_h_filtered, frame_rate_hz=fps)
+    new_right_velocity = calculate_velocity(new_right_h_filtered, frame_rate_hz=fps)
+    new_left_acceleration = calculate_acceleration(new_left_velocity, frame_rate_hz=fps)
+    new_right_acceleration = calculate_acceleration(new_right_velocity, frame_rate_hz=fps)
     
     # Update data dictionary
     updated_data_dict = {
@@ -701,11 +711,11 @@ def export_data(n_clicks, start_frame, end_frame, stored_data):
     
     # Update labels
     fig_time.update_yaxes(title_text="Angle (degrees)", row=1, col=1)
-    fig_time.update_yaxes(title_text="Velocity (°/frame)", row=1, col=2)
-    fig_time.update_yaxes(title_text="Acceleration (°/frame²)", row=1, col=3)
+    fig_time.update_yaxes(title_text="Velocity (°/s)", row=1, col=2)
+    fig_time.update_yaxes(title_text="Acceleration (°/s²)", row=1, col=3)
     fig_time.update_yaxes(title_text="Angle (degrees)", row=2, col=1)
-    fig_time.update_yaxes(title_text="Velocity (°/frame)", row=2, col=2)
-    fig_time.update_yaxes(title_text="Acceleration (°/frame²)", row=2, col=3)
+    fig_time.update_yaxes(title_text="Velocity (°/s)", row=2, col=2)
+    fig_time.update_yaxes(title_text="Acceleration (°/s²)", row=2, col=3)
     
     for row in [1, 2]:
         for col in [1, 2, 3]:
