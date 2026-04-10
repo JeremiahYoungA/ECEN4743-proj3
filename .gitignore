@@ -5,3 +5,9 @@ __pycache__/
 *.pyc
 *.pyo
 .DS_Store
+
+# Ignore PNGs except in export directories
+*.png
+!export_*/*.png
+
+data-extraction.py

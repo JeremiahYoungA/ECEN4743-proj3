@@ -126,7 +126,7 @@ def process_video(video_path, output_csv=None, output_json=None):
 
 if __name__ == "__main__":
     # Replace with your video file path
-    video_file = "piao_video.mov"
+    video_file = input("Enter the path to the video file: ")
     process_video(
         video_file,
         output_csv="eye_tracking_data.csv",
