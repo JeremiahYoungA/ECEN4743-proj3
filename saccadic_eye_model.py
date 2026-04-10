@@ -32,7 +32,12 @@ class SaccadicEyeModel:
         print(f"  Passive viscosity B_p = {self.B_p:.3f} N·s/rad")
     
     def get_nonlinear_viscosity(self, tension, velocity):
-        """Calculate nonlinear viscosity using Hill's force-velocity relationship."""
+        """
+        Calculate nonlinear viscosity using Hill's force-velocity relationship.
+        
+        Governing equation (Hill hyperbola):
+        B(v) = B_max * (v_max + |v|) / (v_max * (1 + |v|/v_max))
+        """
         v_normalized = velocity / self.v_max
         
         if abs(v_normalized) < 0.01:
@@ -73,7 +78,19 @@ class SaccadicEyeModel:
         return E_ag, E_ant
 
     def simulate_saccade(self, t, saccade_onset=0.01, saccade_magnitude=10, initial_position=0, use_ramp=False, peak_velocity=500):
-        """Simulate saccadic eye movement using coupled ODEs with 6 state variables."""
+        """
+        Simulate saccadic eye movement using coupled ODEs with 6 state variables.
+        
+        Governing equations (6-state Bahill model):
+        dx1/dt = v1
+        dv1/dt = (torque_ag - torque_ant - B_p*v1 - K_p*x1) / J_p
+        dx2/dt = (F_ag - K_lt*x2 - K_se*(x2-x1)) / B_ag
+        dx3/dt = (F_ant - K_lt*x3 - K_se*(x3-x1)) / B_ant
+        dF_ag/dt = (E_ag - F_ag) / T_ag
+        dF_ant/dt = (E_ant - F_ant) / T_ant
+        
+        States: [x1=position, v1=velocity, x2=agonist, x3=antagonist, F_ag=force_ag, F_ant=force_ant]
+        """
         print("\n=== NONLINEAR SACCADIC MODEL (Bahill et al., 1976) ===")
         
         input_type = "LINEAR RAMP" if use_ramp else "PULSE-STEP"
@@ -84,16 +101,16 @@ class SaccadicEyeModel:
         
         def nonlinear_ode(state, time_val):
             """Bahill model: eyeball mechanics + muscle activation dynamics."""
-            x1, v1, x2, x3, x4, x5 = state
+            x1, v1, x2, x3, F_ag, F_ant = state
             
             E_ag = np.interp(time_val, t, E_ag_array)
             E_ant = np.interp(time_val, t, E_ant_array)
             
             v_ag = (self.K_se * (x2 - x1)) / (self.B_max * 1.0) if self.B_max != 0 else 0
-            B_ag = self.get_nonlinear_viscosity(x4, v_ag)
+            B_ag = self.get_nonlinear_viscosity(F_ag, v_ag)
             
             v_ant = (self.K_se * (x3 - x1)) / (self.B_max * 1.0) if self.B_max != 0 else 0
-            B_ant = self.get_nonlinear_viscosity(x5, v_ant)
+            B_ant = self.get_nonlinear_viscosity(F_ant, v_ant)
             
             dx1_dt = v1
             
@@ -103,16 +120,16 @@ class SaccadicEyeModel:
             
             dv1_dt = (torque_ag - torque_ant - passive_force) / self.J_p
             
-            force_ag = x4 - self.K_lt * x2 - self.K_se * (x2 - x1)
-            dx2_dt = force_ag / (B_ag + 0.01)
+            net_ag = F_ag - self.K_lt * x2 - self.K_se * (x2 - x1)
+            dx2_dt = net_ag / (B_ag + 0.01)
             
-            force_ant = x5 - self.K_lt * x3 - self.K_se * (x3 - x1)
-            dx3_dt = force_ant / (B_ant + 0.01)
+            net_ant = F_ant - self.K_lt * x3 - self.K_se * (x3 - x1)
+            dx3_dt = net_ant / (B_ant + 0.01)
             
-            dx4_dt = (E_ag - x4) / self.T_ag
-            dx5_dt = (E_ant - x5) / self.T_ant
+            dF_ag_dt = (E_ag - F_ag) / self.T_ag
+            dF_ant_dt = (E_ant - F_ant) / self.T_ant
             
-            return [dx1_dt, dv1_dt, dx2_dt, dx3_dt, dx4_dt, dx5_dt]
+            return [dx1_dt, dv1_dt, dx2_dt, dx3_dt, dF_ag_dt, dF_ant_dt]
         
         print("3. Integrating nonlinear state-variable ODEs...")
         
