@@ -143,7 +143,7 @@ class SaccadicEyeModel:
         print(f"   Peak velocity: {np.max(np.abs(eye_velocity)):.2f} °/s")
         print(f"   Final position: {eye_position[-1]:.4f} °")
         print(f"   Max overshoot: {(np.max(np.abs(eye_position)) - np.abs(eye_position[-1])):.4f} °")
-        print("   ✓ Integration complete\n")
+        print("   Integration complete\n")
         
         return t, eye_position, eye_velocity, eye_acceleration, E_ag_array, E_ant_array
 
